@@ -72,12 +72,47 @@ pais(cavigliasso,argentina).
 % El countryman es modelo de auto marca mini, touareg es marca volkswagen, y hilux es de marca toyota.
 % Teórico : ¿Qué debo agregar si quiero decir que el modelo buggy es marca mini pero el modelo dkr no lo es? Justificar conceptualmente.
 
+esDe(auto(Modelo), peugeot):-
+    Modelo = 2008.
+esDe(auto(Modelo), peugeot):-
+    Modelo = 3008.
+esDe(auto(Modelo), mini):-
+    Modelo = countryman.
+esDe(auto(Modelo), volkswagen):-
+    Modelo = touareg.
+esDe(auto(Modelo), toyota):-
+    Modelo = hilux.
+
+% Si quiero decir que el modelo buggy es marca mini, deberia agregar un hecho donde diga que si el modelo de un auto es buggy, entonces relacione a 
+% ese auto con la marca mini utilizando el predicado esDe/2, en cambio para decir que el modelo dkr no lo es, basta con no escribirlo en la base de
+% conocimientos ya que como prolog trabaja con el concepto de universo cerrado, si algo no esta puesto en la base de conocimientos, entonces ya de por
+% si es falso.
+
 % Punto 2
 % ganadorReincidente/1. Se cumple para aquel competidor que ganó en más de un año.
+ganadorReincidente(Competidor):-
+    ganador(UnAnio, Competidor, _),
+    ganador(OtroAnio, Competidor, _),
+    UnAnio \= OtroAnio.
 
 % Punto 3
 % inspiraA/2. Un conductor resulta inspirador para otro cuando ganó y el otro no, y también resulta inspirador cuando ganó algún año anterior al otro. 
 % En cualquier caso, el inspirador debe ser del mismo país que el inspirado.
+inspiraA(Conductor, Otro):-
+    ganador(_, Conductor, _),
+    not(ganador(_, Otro, _)),
+    sonDelMismoPais(Conductor, Otro).
+inspiraA(Conductor, Otro):-
+    ganador(UnAnio, Conductor, _),
+    ganador(OtroAnio, Conductor, _),
+    UnAnio < OtroAnio,
+    sonDelMismoPais(Conductor, Otro),
+    Conductor \= Otro.
+
+sonDelMismoPais(Uno, Otro):-
+    pais(Uno, UnPais),
+    pais(Otro, OtroPais),
+    UnPais = OtroPais.
 
 % Punto 4
 % marcaDeLaFortuna/2. Relaciona un conductor con una marca si sólo ganó con vehículos de esa marca. 
@@ -86,7 +121,24 @@ pais(cavigliasso,argentina).
 % ● La marca de las motos dependen del año de fabricación: las fabricadas a partir del 2000 inclusive son ktm, las anteriores yamaha.
 % ● La marca de los camiones es kamaz si lleva vodka, sino la marca es iveco.
 % ● La marca del cuatri se indica en cada uno.
+marcaDeLaFortuna(Conductor, Marca):-
+    usoMarca(Conductor, Marca),
+    forall(ganador(_, Conductor, Vehiculo), esDe(Vehiculo, Marca)).
 
+usoMarca(Conductor, Marca):-
+    ganador(_, Conductor, Vehiculo),
+    esDe(Vehiculo, Marca).
+
+esDe(moto(AnioFabricacion, _), ktm):-
+    AnioFabricacion >= 2000.
+esDe(moto(AnioFabricacion, _), yamaha):-
+    AnioFabricacion < 2000.
+esDe(camion(Items), kamaz):-
+    member(vodka, Items).
+esDe(camion(Items), iveco):-
+    not(member(vodka, Items)).
+esDe(cuatri(Marca), Marca).
+    
 % Punto 5
 % heroePopular/1. Decimos que un corredor es un héroe popular cuando sirvió de inspiración a alguien, y además el año que salió ganador fue 
 % el único de los conductores ganadores que no usó un vehículo caro.
