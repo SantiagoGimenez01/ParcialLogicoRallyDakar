@@ -72,16 +72,11 @@ pais(cavigliasso,argentina).
 % El countryman es modelo de auto marca mini, touareg es marca volkswagen, y hilux es de marca toyota.
 % Teórico : ¿Qué debo agregar si quiero decir que el modelo buggy es marca mini pero el modelo dkr no lo es? Justificar conceptualmente.
 
-esDe(auto(Modelo), peugeot):-
-    Modelo = 2008.
-esDe(auto(Modelo), peugeot):-
-    Modelo = 3008.
-esDe(auto(Modelo), mini):-
-    Modelo = countryman.
-esDe(auto(Modelo), volkswagen):-
-    Modelo = touareg.
-esDe(auto(Modelo), toyota):-
-    Modelo = hilux.
+esDe(auto(2008), peugeot).
+esDe(auto(3008), peugeot).
+esDe(auto(countryman), mini).
+esDe(auto(touareg), volkswagen).
+esDe(auto(hilux), toyota).
 
 % Si quiero decir que el modelo buggy es marca mini, deberia agregar un hecho donde diga que si el modelo de un auto es buggy, entonces relacione a 
 % ese auto con la marca mini utilizando el predicado esDe/2, en cambio para decir que el modelo dkr no lo es, basta con no escribirlo en la base de
@@ -122,6 +117,7 @@ sonDelMismoPais(Uno, Otro):-
 % ● La marca de los camiones es kamaz si lleva vodka, sino la marca es iveco.
 % ● La marca del cuatri se indica en cada uno.
 marcaDeLaFortuna(Conductor, Marca):-
+    ganador(_, Conductor, _),
     usoMarca(Conductor, Marca),
     forall(ganador(_, Conductor, Vehiculo), esDe(Vehiculo, Marca)).
 
@@ -144,25 +140,35 @@ esDe(cuatri(Marca), Marca).
 % el único de los conductores ganadores que no usó un vehículo caro.
 % Un vehículo es caro cuando es de una marca cara (por ahora las caras son mini, toyota e iveco), o tiene al menos tres suspensiones extras.
 % La cantidad de suspensiones extras que trae una moto se indica en cada una, los cuatri llevan siempre 4, y los otros vehículos ninguna.
+heroePopular(Competidor):-
+    inspiraA(Competidor, _),
+    ganador(Anio, Competidor, _),
+    unicoSinVehiculoCaro(Competidor, Anio).
+
+unicoSinVehiculoCaro(Competidor, Anio):-
+    ganador(Anio, Competidor, Vehiculo),
+    not(esCaro(Vehiculo)),
+    forall((ganador(Anio, Competidores, Vehiculos), Competidores \= Competidor), esCaro(Vehiculos)).
+
+cantidadSuspensiones(moto(_, Suspensiones), Suspensiones).
+cantidadSuspensiones(cuatri(_), 4).
+
+marcaCara(mini).
+marcaCara(toyota).
+marcaCara(iveco).
+
+esCaro(Vehiculo):-
+    esDe(Vehiculo, Marca),
+    marcaCara(Marca).
+esCaro(Vehiculo):-
+    cantidadSuspensiones(Vehiculo, Suspensiones),
+    Suspensiones >= 3.
 
 % Punto 6
 % Para terminar (En este punto no hace falta que todos los predicados sean inversibles, forma parte del análisis el determinar cuáles deberían serlo 
 % y para qué parámetros, de forma de poder solucionar el problema planteado)
 % Los corredores se enteraron del sistema que estamos desarrollando y quieren que los ayudemos a planificar su recorrido. Para armar sus estrategias, 
 % nos pidieron un programa les permita separar el recorrido en tramos para decidir en qué ciudades frenar a hacer mantenimiento. 
-% Para eso:
-% a. Necesitamos un predicado que permita saber cuántos kilómetros existen entre dos locaciones distintas. 
-% ¡Atención! Debe poder calcularse también entre locaciones que no pertenezcan a la misma etapa.
-% Por ejemplo, entre sanRafael y copiapo hay 208+326+177+274 = 985 km
-
-% b. Saber si un vehículo puede recorrer cierta distancia sin parar. Por ahora (posiblemente cambie) diremos que un vehículo caro puede recorrer 2000 km, 
-% mientras que el resto solamente 1800 km. Además, los camiones pueden también recorrer una distancia máxima igual a la cantidad de cosas que lleva * 1000.
-% Por ejemplo, una moto(1999,1) como no es cara, puede recorrer 1800 km pero no 1900 km.
-
-% c. Los corredores quieren saber, dado un vehículo y un origen, cuál es el destino más lejano al que pueden llegar sin parar.
-% Para la moto del punto anterior el destino más lejano desde marDelPlata es copiapo. Ya suman 1335 km, pero el con el próximo destino (antofagasta) se va
-% a 1812 km, que es una distancia que no puede recorrer
-
 etapa(marDelPlata,santaRosa,60).
 etapa(santaRosa,sanRafael,290).
 etapa(sanRafael,sanJuan,208).
@@ -176,4 +182,41 @@ etapa(arica,arequipa,478).
 etapa(arequipa,nazca,246).
 etapa(nazca,pisco,276).
 etapa(pisco,lima,29).
+% Para eso:
+% a. Necesitamos un predicado que permita saber cuántos kilómetros existen entre dos locaciones distintas. 
+% ¡Atención! Debe poder calcularse también entre locaciones que no pertenezcan a la misma etapa.
+% Por ejemplo, entre sanRafael y copiapo hay 208+326+177+274 = 985 km
+
+distancia(UnaLocalidad, OtraLocalidad, Distancia):-
+    etapa(UnaLocalidad, OtraLocalidad, Distancia).
+distancia(UnaLocalidad, OtraLocalidad, Distancia):-
+    etapa(UnaLocalidad, TerceraLocalidad, DistanciaParcial),
+    distancia(TerceraLocalidad, OtraLocalidad, DistanciaFaltante),
+    Distancia is DistanciaParcial + DistanciaFaltante.
+
+% b. Saber si un vehículo puede recorrer cierta distancia sin parar. Por ahora (posiblemente cambie) diremos que un vehículo caro puede recorrer 2000 km, 
+% mientras que el resto solamente 1800 km. Además, los camiones pueden también recorrer una distancia máxima igual a la cantidad de cosas que lleva * 1000.
+% Por ejemplo, una moto(1999,1) como no es cara, puede recorrer 1800 km pero no 1900 km.
+
+puedeRecorrer(Vehiculo, Distancia):-
+    limiteDistancia(Vehiculo, Limite),
+    Limite >= Distancia.
+
+limiteDistancia(camion(Items), Limite):-
+    length(Items, Cantidad),
+    Limite =< (Cantidad * 1000).
+limiteDistancia(Vehiculo, 2000):-
+    esCaro(Vehiculo),
+    Vehiculo \= camion(_).
+limiteDistancia(Vehiculo, 1800):-
+    not(esCaro(Vehiculo)),
+    Vehiculo \= camion(_).
+% c. Los corredores quieren saber, dado un vehículo y un origen, cuál es el destino más lejano al que pueden llegar sin parar.
+% Para la moto del punto anterior el destino más lejano desde marDelPlata es copiapo. Ya suman 1335 km, pero el con el próximo destino (antofagasta) se va
+% a 1812 km, que es una distancia que no puede recorrer
+destinoMasLejano(Vehiculo, Origen, DestinoMasLejano):-
+    distancia(Origen, DestinoMasLejano, Distancia),
+    puedeRecorrer(Vehiculo, Distancia).
+
+
 
